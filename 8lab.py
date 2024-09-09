@@ -42,7 +42,7 @@ def load_segments_from_file(filepath, canvas, segments):
     except Exception as e:
         messagebox.showerror("Ошибка загрузки", f"Не удалось загрузить файл:\n{e}")
 
-def change_color(segment, canvas):
+def change_color(segment, canvas, segments):
     color = colorchooser.askcolor()[1]
     if color:
         segment.color = color
@@ -50,7 +50,7 @@ def change_color(segment, canvas):
         for s in segments:
             s.draw(canvas)
 
-def change_position(segment, canvas):
+def change_position(segment, canvas, segments):
     def save_position():
         try:
             segment.start_x = int(entry_start_x.get())
@@ -137,12 +137,14 @@ def main():
             frame = tk.Frame(top)
             frame.pack(fill=tk.X)
             tk.Label(frame, text=f"Сегмент {i+1}").pack(side=tk.LEFT)
-            tk.Button(frame, text="Изменить цвет", command=lambda segment=segment: change_color(segment, canvas)).pack(side=tk.LEFT)
-            tk.Button(frame, text="Изменить положение", command=lambda segment=segment: change_position(segment, canvas)).pack(side=tk.LEFT)
+            tk.Button(frame, text="Изменить цвет", command=lambda segment=segment: change_color(segment, canvas, segments)).pack(side=tk.LEFT)
+            tk.Button(frame, text="Изменить положение", command=lambda segment=segment: change_position(segment, canvas, segments)).pack(side=tk.LEFT)
 
-    tk.Button(root, text="Загрузить файл", command=open_file).pack(side=tk.BOTTOM, pady=20)
-    tk.Button(root, text="Показать отрезок", command=show_segments).pack(side=tk.BOTTOM, pady=20)
-    tk.Button(root, text="Добавить отрезок", command=lambda: add_segment(canvas, segments)).pack(side=tk.BOTTOM, pady=20)
+    frame = tk.Frame(root)
+    frame.pack(side=tk.BOTTOM, fill=tk.X)
+    tk.Button(frame, text="Загрузить файл", command=open_file).pack(side=tk.LEFT, fill=tk.X, expand=True)
+    tk.Button(frame, text="Показать отрезки", command=show_segments).pack(side=tk.LEFT, fill=tk.X, expand=True)
+    tk.Button(frame, text="Добавить отрезок", command=lambda: add_segment(canvas, segments)).pack(side=tk.LEFT, fill=tk.X, expand=True)
 
     root.mainloop()
 
