@@ -9,7 +9,7 @@ class TicTacToeApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Крестики-нолики")
-        self.center_window(450, 450) 
+        self.center_window(450, 450)
         self.board = [" " for _ in range(9)]
         self.current_player = "X"
         self.game_mode = "PvP"  # PvP or PvC
@@ -21,7 +21,6 @@ class TicTacToeApp:
     def center_window(self, width=450, height=450):
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-
         center_x = int(screen_width/2 - width/2)
         center_y = int(screen_height/2 - height/2)
         self.root.geometry(f'{width}x{height}+{center_x}+{center_y}')
@@ -37,8 +36,7 @@ class TicTacToeApp:
 
     def create_board(self):
         for i in range(9):
-            button = tk.Button(self.root, text=" ", font="Arial 20",
-                               command=lambda i=i: self.on_button_click(i))
+            button = tk.Button(self.root, text=" ", font="Arial 20", command=lambda i=i: self.on_button_click(i))
             button.grid(row=i // 3, column=i % 3, sticky='nsew')
             self.buttons[i] = button
         for i in range(3):
@@ -54,7 +52,9 @@ class TicTacToeApp:
             button.config(text=" ", state=tk.NORMAL)
         if mode == "PvC" and difficulty == "hard":
             self.current_player = "O"
-            self.computer_move()
+            self.board[4] = "O"
+            self.buttons[4].config(text="O")
+            self.toggle_player()
 
     def on_button_click(self, i):
         if self.board[i] == " " and not self.check_winner(self.current_player):
@@ -86,16 +86,50 @@ class TicTacToeApp:
         return random.choice(available_moves)
 
     def get_hard_move(self):
-        if self.board[4] == " ":
-            return 4
+        best_score = float('-inf')
+        best_move = 0
+        for i in range(len(self.board)):
+            if self.board[i] == " ":
+                self.board[i] = "O"
+                score = self.minimax(self.board, 0, False)
+                self.board[i] = " "
+                if score > best_score:
+                    best_score = score
+                    best_move = i
+        return best_move
+
+    def minimax(self, board, depth, is_maximizing):
+        if self.check_winner("O"):
+            return 1
+        if self.check_winner("X"):
+            return -1
+        if " " not in board:
+            return 0
+
+        if is_maximizing:
+            best_score = float('-inf')
+            for i in range(len(board)):
+                if board[i] == " ":
+                    board[i] = "O"
+                    score = self.minimax(board, depth + 1, False)
+                    board[i] = " "
+                    best_score = max(score, best_score)
+            return best_score
         else:
-            return self.get_random_move()
+            best_score = float('inf')
+            for i in range(len(board)):
+                if board[i] == " ":
+                    board[i] = "X"
+                    score = self.minimax(board, depth + 1, True)
+                    board[i] = " "
+                    best_score = min(score, best_score)
+            return best_score
 
     def check_winner(self, player):
         win_conditions = [
-            [0, 1, 2], [3, 4, 5], [6, 7, 8],  
-            [0, 3, 6], [1, 4, 7], [2, 5, 8],  
-            [0, 4, 8], [2, 4, 6]              
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
         ]
         for condition in win_conditions:
             if all(self.board[i] == player for i in condition):
