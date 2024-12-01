@@ -1,266 +1,181 @@
 import tkinter as tk
+from tkinter import messagebox
 from PIL import Image, ImageTk
 import random
 
 class CheckersGame:
-    def __init__(self, root):
+    def __init__(self, root, mode):
         self.root = root
         self.root.title("Italian Checkers - Giveaway")
-
-        self.white_piece_image = Image.open("white.png").resize((40, 40), Image.Resampling.LANCZOS)
-        self.white_piece_photo = ImageTk.PhotoImage(self.white_piece_image)
-
-        self.black_piece_image = Image.open("black.png").resize((40, 40), Image.Resampling.LANCZOS)
-        self.black_piece_photo = ImageTk.PhotoImage(self.black_piece_image)
-
-        self.white_king_image = Image.open("white.png").resize((40, 40), Image.Resampling.LANCZOS)
-        self.white_king_photo = ImageTk.PhotoImage(self.white_king_image)
-
-        self.black_king_image = Image.open("black.png").resize((40, 40), Image.Resampling.LANCZOS)
-        self.black_king_photo = ImageTk.PhotoImage(self.black_king_image)
-
-        self.cell_size = 50
-        self.canvas = tk.Canvas(self.root, width=8 * self.cell_size, height=8 * self.cell_size)
+        self.mode = mode
+        self.board = self.create_board()
+        self.canvas = tk.Canvas(root, width=400, height=400)
         self.canvas.pack()
-
-        self.draw_board()
-
-        self.board = [
-            [None, 'b', None, 'b', None, 'b', None, 'b'],
-            ['b', None, 'b', None, 'b', None, 'b', None],
-            [None, 'b', None, 'b', None, 'b', None, 'b'],
-            [None, None, None, None, None, None, None, None],
-            [None, None, None, None, None, None, None, None],
-            ['w', None, 'w', None, 'w', None, 'w', None],
-            [None, 'w', None, 'w', None, 'w', None, 'w'],
-            ['w', None, 'w', None, 'w', None, 'w', None]
-        ]
-
         self.selected_piece = None
         self.turn = 'w'
-        self.mode = None
-
+        self.load_images()
+        self.draw_board()
         self.draw_pieces()
-
         self.canvas.bind("<Button-1>", self.on_click)
+        self.bot_active = (self.mode != 'pvp')
+        if self.bot_active and self.turn == 'b':
+            self.bot_move()
 
-        self.menu()
+    def load_images(self):
+        self.white_piece_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
+        self.black_piece_img = ImageTk.PhotoImage(Image.open("black.png").resize((40, 40)))
+        self.white_king_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
+        self.black_king_img = ImageTk.PhotoImage(Image.open("black.png").resize((40, 40)))
+        self.images = {
+            'w': self.white_piece_img,
+            'b': self.black_piece_img,
+            'W': self.white_king_img,
+            'B': self.black_king_img,
+        }
+
+    def create_board(self):
+        board = [[None for _ in range(8)] for _ in range(8)]
+        for row in range(3):
+            for col in range(8):
+                if (row + col) % 2 == 1:
+                    board[row][col] = 'b'
+        for row in range(5, 8):
+            for col in range(8):
+                if (row + col) % 2 == 1:
+                    board[row][col] = 'w'
+        return board
 
     def draw_board(self):
+        self.canvas.delete("all")
         for row in range(8):
             for col in range(8):
-                color = "white" if (row + col) % 2 == 0 else "gray"
-                self.canvas.create_rectangle(
-                    col * self.cell_size, row * self.cell_size,
-                    (col + 1) * self.cell_size, (row + 1) * self.cell_size,
-                    fill=color
-                )
+                color = "white" if (row + col) % 2 == 0 else "grey"
+                self.canvas.create_rectangle(col * 50, row * 50, col * 50 + 50, row * 50 + 50, fill=color)
 
     def draw_pieces(self):
-        self.canvas.delete("piece")
         for row in range(8):
             for col in range(8):
                 piece = self.board[row][col]
-                if piece == 'w':
-                    self.canvas.create_image(
-                        col * self.cell_size + self.cell_size // 2,
-                        row * self.cell_size + self.cell_size // 2,
-                        image=self.white_piece_photo,
-                        tags="piece"
-                    )
-                elif piece == 'b':
-                    self.canvas.create_image(
-                        col * self.cell_size + self.cell_size // 2,
-                        row * self.cell_size + self.cell_size // 2,
-                        image=self.black_piece_photo,
-                        tags="piece"
-                    )
-                elif piece == 'W':
-                    self.canvas.create_image(
-                        col * self.cell_size + self.cell_size // 2,
-                        row * self.cell_size + self.cell_size // 2,
-                        image=self.white_king_photo,
-                        tags="piece"
-                    )
-                elif piece == 'B':
-                    self.canvas.create_image(
-                        col * self.cell_size + self.cell_size // 2,
-                        row * self.cell_size + self.cell_size // 2,
-                        image=self.black_king_photo,
-                        tags="piece"
-                    )
+                if piece:
+                    x0, y0 = col * 50 + 5, row * 50 + 5
+                    self.canvas.create_image(x0, y0, anchor='nw', image=self.images[piece])
 
     def on_click(self, event):
-        col = event.x // self.cell_size
-        row = event.y // self.cell_size
+        col, row = event.x // 50, event.y // 50
         if self.selected_piece:
-            self.move_piece(row, col)
+            self.move_piece(self.selected_piece, (row, col))
+            self.selected_piece = None
         else:
-            self.select_piece(row, col)
-
-    def select_piece(self, row, col):
-        piece = self.board[row][col]
-        if piece and piece.lower() == self.turn:
             self.selected_piece = (row, col)
-            print(f"Selected piece at {row}, {col}")
 
-    def move_piece(self, row, col):
-        if self.is_valid_move(self.selected_piece[0], self.selected_piece[1], row, col):
-            self.board[row][col] = self.board[self.selected_piece[0]][self.selected_piece[1]]
-            self.board[self.selected_piece[0]][self.selected_piece[1]] = None
-            self.promote_piece(row, col)
-            self.selected_piece = None
-            self.turn = 'b' if self.turn == 'w' else 'w'
+    def move_piece(self, from_pos, to_pos):
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
+        piece = self.board[from_row][from_col]
+        if self.validate_move(piece, from_pos, to_pos):
+            self.board[to_row][to_col] = self.board[from_row][from_col]
+            self.board[from_row][from_col] = None
+            self.draw_board()
             self.draw_pieces()
-            print(f"Moved piece to {row}, {col}")
-            if self.check_winner():
-                self.end_game()
-            elif self.mode == "easy_bot" and self.turn == 'b':
-                self.easy_bot_move()
-            elif self.mode == "hard_bot" and self.turn == 'b':
-                self.hard_bot_move()
-        else:
-            print(f"Invalid move to {row}, {col}")
-            self.selected_piece = None
+            self.check_promotion(to_row, to_col)
+            if self.check_game_over():
+                return
+            self.switch_turn()
 
-    def is_valid_move(self, from_row, from_col, to_row, to_col):
-        if to_row < 0 or to_row >= 8 or to_col < 0 or to_col >= 8:
-            return False
+    def validate_move(self, piece, from_pos, to_pos):
+        from_row, from_col = from_pos
+        to_row, to_col = to_pos
         if self.board[to_row][to_col] is not None:
             return False
-        piece = self.board[from_row][from_col]
-        if piece.lower() == 'w':
-            if piece == 'w' and to_row == from_row - 1 and abs(to_col - from_col) == 1:
+        if piece == 'w' and to_row == from_row - 1 and abs(to_col - from_col) == 1:
+            return True
+        if piece == 'b' and to_row == from_row + 1 and abs(to_col - from_col) == 1:
+            return True
+        if piece in ['W', 'B']:
+            if abs(to_row - from_row) == abs(to_col - from_col):
                 return True
-            if piece == 'w' and to_row == from_row - 2 and abs(to_col - from_col) == 2:
-                middle_row, middle_col = (from_row + to_row) // 2, (from_col + to_col) // 2
-                if self.board[middle_row][middle_col] in ['b', 'B']:
-                    self.board[middle_row][middle_col] = None
-                    return True
-            if piece == 'W':
-                if abs(to_row - from_row) == abs(to_col - from_col):
-                    step_row = 1 if to_row > from_row else -1
-                    step_col = 1 if to_col > from_col else -1
-                    for i in range(1, abs(to_row - from_row)):
-                        if self.board[from_row + i * step_row][from_col + i * step_col] is not None:
-                            return False
-                    return True
-        elif piece.lower() == 'b':
-            if piece == 'b' and to_row == from_row + 1 and abs(to_col - from_col) == 1:
-                return True
-            if piece == 'b' and to_row == from_row + 2 and abs(to_col - from_col) == 2:
-                middle_row, middle_col = (from_row + to_row) // 2, (from_col + to_col) // 2
-                if self.board[middle_row][middle_col] in ['w', 'W']:
-                    self.board[middle_row][middle_col] = None
-                    return True
-            if piece == 'B':
-                if abs(to_row - from_row) == abs(to_col - from_col):
-                    step_row = 1 if to_row > from_row else -1
-                    step_col = 1 if to_col > from_col else -1
-                    for i in range(1, abs(to_row - from_row)):
-                        if self.board[from_row + i * step_row][from_col + i * step_col] is not None:
-                            return False
-                    return True
         return False
 
-    def promote_piece(self, row, col):
+    def check_promotion(self, row, col):
         piece = self.board[row][col]
         if piece == 'w' and row == 0:
             self.board[row][col] = 'W'
-        elif piece == 'b' and row == 7:
+        if piece == 'b' and row == 7:
             self.board[row][col] = 'B'
 
-    def check_winner(self):
+    def switch_turn(self):
+        self.turn = 'b' if self.turn == 'w' else 'w'
+        if self.bot_active and self.turn == 'b':
+            self.bot_move()
+
+    def bot_move(self):
+        if self.mode == 'easy_bot':
+            self.easy_bot_move()
+        elif self.mode == 'hard_bot':
+            self.hard_bot_move()
+
+    def easy_bot_move(self):
+        possible_moves = self.get_all_possible_moves('b')
+        if possible_moves:
+            move = random.choice(possible_moves)
+            self.move_piece(move[0], move[1])
+
+    def hard_bot_move(self):
+        possible_moves = self.get_all_possible_moves('b')
+        if possible_moves:
+            # Implement more advanced logic for hard bot here
+            # For simplicity, let's just use the same logic as easy bot for now
+            move = random.choice(possible_moves)
+            self.move_piece(move[0], move[1])
+
+    def get_all_possible_moves(self, color):
+        moves = []
+        for row in range(8):
+            for col in range(8):
+                if self.board[row][col] and self.board[row][col].lower() == color:
+                    for dr in [-1, 1]:
+                        for dc in [-1, 1]:
+                            new_row, new_col = row + dr, col + dc
+                            if 0 <= new_row < 8 and 0 <= new_col < 8:
+                                if self.validate_move(self.board[row][col], (row, col), (new_row, new_col)):
+                                    moves.append(((row, col), (new_row, new_col)))
+        return moves
+
+    def check_game_over(self):
         white_pieces = sum(row.count('w') + row.count('W') for row in self.board)
         black_pieces = sum(row.count('b') + row.count('B') for row in self.board)
         if white_pieces == 0:
-            self.winner = 'Black'
+            self.end_game("Черные победили!")
             return True
         if black_pieces == 0:
-            self.winner = 'White'
+            self.end_game("Белые победили!")
             return True
-        if not self.has_valid_moves('w'):
-            self.winner = 'Black'
+        if not self.get_all_possible_moves('w'):
+            self.end_game("Черные победили!")
             return True
-        if not self.has_valid_moves('b'):
-            self.winner = 'White'
+        if not self.get_all_possible_moves('b'):
+            self.end_game("Белые победили!")
             return True
         return False
 
-        def has_valid_moves(self, player):
-            for row in range(8):
-                for col in range(8):
-                    if self.board[row][col] == player:
-                        if self.can_move(row, col):
-                            return True
-            return False
+    def end_game(self, message):
+        messagebox.showinfo("Game Over", message)
+        self.root.quit()
 
-        def can_move(self, row, col):
-            piece = self.board[row][col]
-            if piece == 'w':
-                if self.is_valid_move(row, col, row - 1, col - 1):
-                    return True
-                if self.is_valid_move(row, col, row - 1, col + 1):
-                    return True
-                if self.is_valid_move(row, col, row - 2, col - 2):
-                    return True
-                if self.is_valid_move(row, col, row - 2, col + 2):
-                    return True
-            elif piece == 'b':
-                if self.is_valid_move(row, col, row + 1, col - 1):
-                    return True
-                if self.is_valid_move(row, col, row + 1, col + 1):
-                    return True
-                if self.is_valid_move(row, col, row + 2, col - 2):
-                    return True
-                if self.is_valid_move(row, col, row + 2, col + 2):
-                    return True
-            return False
+def start_game(mode):
+    game_root = tk.Toplevel()
+    game = CheckersGame(game_root, mode)
+    game_root.mainloop()
 
-        def move_piece(self, row, col):
-            if self.selected_piece:
-                from_row, from_col = self.selected_piece
-                if self.is_valid_move(from_row, from_col, row, col):
-                    self.board[row][col] = self.board[from_row][from_col]
-                    self.board[from_row][from_col] = None
-                    self.selected_piece = None
-                    self.turn = 'b' if self.turn == 'w' else 'w'
-                    self.draw_pieces()
-                    print(f"Moved piece to {row}, {col}")
+if __name__ == "__main__":
+    root = tk.Tk()
+    root.title("Select Game Mode")
 
-                    if not self.has_valid_moves(self.turn):
-                        print(f"No valid moves for {self.turn}. Game over!")
-                        self.root.quit()
-                else:
-                    print(f"Invalid move to {row}, {col}")
-                    self.selected_piece = None
+    tk.Label(root, text="Выбор режима:").pack()
 
-        def is_valid_move(self, from_row, from_col, to_row, to_col):
-            if to_row < 0 or to_row >= 8 or to_col < 0 or to_col >= 8:
-                return False
-            if self.board[to_row][to_col] is not None:
-                return False
-            piece = self.board[from_row][from_col]
-            if piece == 'w' and to_row == from_row - 1 and abs(to_col - from_col) == 1:
-                return True
-            if piece == 'b' and to_row == from_row + 1 and abs(to_col - from_col) == 1:
-                return True
+    tk.Button(root, text="Легкий уровень", command=lambda: start_game('easy_bot')).pack()
+    tk.Button(root, text="Сложный уровень", command=lambda: start_game('hard_bot')).pack()
+    tk.Button(root, text="PvP", command=lambda: start_game('pvp')).pack()
 
-            # Проверка на захват
-            if piece == 'w' and to_row == from_row - 2 and abs(to_col - from_col) == 2:
-                middle_row, middle_col = (from_row + to_row) // 2, (from_col + to_col) // 2
-                if self.board[middle_row][middle_col] == 'b':
-                    self.board[middle_row][middle_col] = None
-                    return True
-            if piece == 'b' and to_row == from_row + 2 and abs(to_col - from_col) == 2:
-                middle_row, middle_col = (from_row + to_row) // 2, (from_col + to_col) // 2
-                if self.board[middle_row][middle_col] == 'w':
-                    self.board[middle_row][middle_col] = None
-                    return True
+    root.mainloop()
 
-            return False
-
-    if __name__ == "__main__":
-        root = tk.Tk()
-        game = CheckersGame(root)
-        root.mainloop()
