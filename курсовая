@@ -1,13 +1,15 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 from PIL import Image, ImageTk
 import random
 
+# Класс игры в шашки
 class CheckersGame:
-    def __init__(self, root, mode):
+    def __init__(self, root, mode, player_name):
         self.root = root
-        self.root.title("Italian Checkers - Giveaway")
+        self.root.title(f"Итальянские шашки - {player_name}")
         self.mode = mode
+        self.player_name = player_name
         self.board = self.create_board()
         self.canvas = tk.Canvas(root, width=400, height=400)
         self.canvas.pack()
@@ -22,6 +24,7 @@ class CheckersGame:
             self.bot_move()
 
     def load_images(self):
+        # Загрузка изображений шашек
         self.white_piece_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
         self.black_piece_img = ImageTk.PhotoImage(Image.open("black.png").resize((40, 40)))
         self.white_king_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
@@ -34,6 +37,7 @@ class CheckersGame:
         }
 
     def create_board(self):
+        # Создание начального состояния доски
         board = [[None for _ in range(8)] for _ in range(8)]
         for row in range(3):
             for col in range(8):
@@ -46,13 +50,17 @@ class CheckersGame:
         return board
 
     def draw_board(self):
+        # Отрисовка доски
         self.canvas.delete("all")
         for row in range(8):
             for col in range(8):
                 color = "white" if (row + col) % 2 == 0 else "grey"
-                self.canvas.create_rectangle(col * 50, row * 50, col * 50 + 50, row * 50 + 50, fill=color)
+                self.canvas.create_rectangle(
+                    col * 50, row * 50, col * 50 + 50, row * 50 + 50, fill=color
+                )
 
     def draw_pieces(self):
+        # Отрисовка шашек
         for row in range(8):
             for col in range(8):
                 piece = self.board[row][col]
@@ -61,6 +69,7 @@ class CheckersGame:
                     self.canvas.create_image(x0, y0, anchor='nw', image=self.images[piece])
 
     def on_click(self, event):
+        # Обработка клика мыши
         col, row = event.x // 50, event.y // 50
         if self.selected_piece:
             self.move_piece(self.selected_piece, (row, col))
@@ -69,6 +78,7 @@ class CheckersGame:
             self.selected_piece = (row, col)
 
     def move_piece(self, from_pos, to_pos):
+        # Перемещение шашки
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         piece = self.board[from_row][from_col]
@@ -83,6 +93,7 @@ class CheckersGame:
             self.switch_turn()
 
     def validate_move(self, piece, from_pos, to_pos):
+        # Проверка корректности хода
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         if self.board[to_row][to_col] is not None:
@@ -97,6 +108,7 @@ class CheckersGame:
         return False
 
     def check_promotion(self, row, col):
+        # Проверка на превращение в дамку
         piece = self.board[row][col]
         if piece == 'w' and row == 0:
             self.board[row][col] = 'W'
@@ -104,31 +116,34 @@ class CheckersGame:
             self.board[row][col] = 'B'
 
     def switch_turn(self):
+        # Смена хода
         self.turn = 'b' if self.turn == 'w' else 'w'
         if self.bot_active and self.turn == 'b':
             self.bot_move()
 
     def bot_move(self):
-        if self.mode == 'easy_bot':
+        # Ход бота
+        if self.mode == 'легкий бот':
             self.easy_bot_move()
-        elif self.mode == 'hard_bot':
+        elif self.mode == 'сложный бот':
             self.hard_bot_move()
 
     def easy_bot_move(self):
+        # Простая логика бота
         possible_moves = self.get_all_possible_moves('b')
         if possible_moves:
             move = random.choice(possible_moves)
             self.move_piece(move[0], move[1])
 
     def hard_bot_move(self):
+        # Продвинутая логика бота
         possible_moves = self.get_all_possible_moves('b')
         if possible_moves:
-            # Implement more advanced logic for hard bot here
-            # For simplicity, let's just use the same logic as easy bot for now
             move = random.choice(possible_moves)
             self.move_piece(move[0], move[1])
 
     def get_all_possible_moves(self, color):
+        # Получение всех возможных ходов
         moves = []
         for row in range(8):
             for col in range(8):
@@ -142,40 +157,45 @@ class CheckersGame:
         return moves
 
     def check_game_over(self):
+        # Проверка завершения игры
         white_pieces = sum(row.count('w') + row.count('W') for row in self.board)
         black_pieces = sum(row.count('b') + row.count('B') for row in self.board)
         if white_pieces == 0:
-            self.end_game("Черные победили!")
+            self.end_game("Черные выиграли!")
             return True
         if black_pieces == 0:
-            self.end_game("Белые победили!")
+            self.end_game("Белые выиграли!")
             return True
         if not self.get_all_possible_moves('w'):
-            self.end_game("Черные победили!")
+            self.end_game("Черные выиграли!")
             return True
         if not self.get_all_possible_moves('b'):
-            self.end_game("Белые победили!")
+            self.end_game("Белые выиграли!")
             return True
         return False
 
     def end_game(self, message):
+        # Завершение игры
         messagebox.showinfo("Game Over", message)
         self.root.quit()
 
+# Функция запуска игры
 def start_game(mode):
-    game_root = tk.Toplevel()
-    game = CheckersGame(game_root, mode)
-    game_root.mainloop()
+    player_name = simpledialog.askstring("Player Registration", "Enter your name:")
+    if player_name:
+        game_root = tk.Toplevel()
+        game = CheckersGame(game_root, mode, player_name)
+        game_root.mainloop()
 
+# Главное окно
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Select Game Mode")
 
-    tk.Label(root, text="Выбор режима:").pack()
+    tk.Label(root, text="Select Game Mode:").pack()
 
-    tk.Button(root, text="Легкий уровень", command=lambda: start_game('easy_bot')).pack()
-    tk.Button(root, text="Сложный уровень", command=lambda: start_game('hard_bot')).pack()
+    tk.Button(root, text="Легкий бот", command=lambda: start_game('easy_bot')).pack()
+    tk.Button(root, text="Сложный бот", command=lambda: start_game('hard_bot')).pack()
     tk.Button(root, text="PvP", command=lambda: start_game('pvp')).pack()
 
     root.mainloop()
-
