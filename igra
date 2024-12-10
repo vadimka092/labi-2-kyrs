@@ -8,7 +8,7 @@ pygame.init()
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Simple Mario Game")
+pygame.display.set_caption("Super game")
 
 # Цвета
 WHITE = (255, 255, 255)
@@ -213,7 +213,7 @@ while running:
         level_text = font.render(f'Level: {current_level + 1}', True, BLACK)
         screen.blit(level_text, (SCREEN_WIDTH - 100, 10))
     else:
-        game_over_text = font.render('Game Over! Press R to Restart', True, BLACK)
+        game_over_text = font.render('Вы проиграли! Нажмите R для перезапуска ', True, BLACK)
         screen.blit(game_over_text, (SCREEN_WIDTH // 2 - 150, SCREEN_HEIGHT // 2 - 20))
 
     # Обновление экрана
