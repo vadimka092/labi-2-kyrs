@@ -21,8 +21,8 @@ class CheckersGame:
     def load_images(self):
         self.white_piece_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
         self.black_piece_img = ImageTk.PhotoImage(Image.open("black.png").resize((40, 40)))
-        self.white_king_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
-        self.black_king_img = ImageTk.PhotoImage(Image.open("black.png").resize((40, 40)))
+        self.white_king_img = ImageTk.PhotoImage(Image.open("white_k.png").resize((40, 40)))
+        self.black_king_img = ImageTk.PhotoImage(Image.open("black_k.png").resize((40, 40)))
         self.images = {
             'w': self.white_piece_img,
             'b': self.black_piece_img,
