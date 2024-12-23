@@ -91,6 +91,7 @@ class CheckersGame:
         from_row, from_col = from_pos
         to_row, to_col = to_pos
 
+        # Проверка, свободна ли клетка назначения
         if self.board[to_row][to_col] is not None:
             return False
 
@@ -98,24 +99,32 @@ class CheckersGame:
         if abs(to_row - from_row) == 2 and abs(to_col - from_col) == 2:
             middle_row = (from_row + to_row) // 2
             middle_col = (from_col + to_col) // 2
-            middle_piece = self.board[middle_row][middle_col]
-
-            # Проверить, что захватываемая шашка - противник и захват вперед
+            middle_piece = self.board[middle_row][middle_col]  # Проверить, что захватываемая шашка - противник
             if middle_piece is not None and middle_piece.lower() != piece.lower():
-                if (piece == 'w' and middle_row < from_row) or (piece == 'b' and middle_row > from_row):
-                    return True
-                return False
+                # Для обычных шашек проверяем, что они захватывают только вперед
+                if piece == 'w' and middle_row < from_row:
+                    return False
+                if piece == 'b' and middle_row > from_row:
+                    return False
+                return True
 
         # Логика обычного движения (только вперед для обычных шашек)
-        if piece == 'w' and to_row == from_row - 1 and abs(to_col - from_col) == 1:
+        if piece == 'w' and to_row == from_row - 1 and abs(to_col - from_col) == 1:  # Белая шашка движется вперед
             return True
-        if piece == 'b' and to_row == from_row + 1 and abs(to_col - from_col) == 1:
+        if piece == 'b' and to_row == from_row + 1 and abs(to_col - from_col) == 1:  # Черная шашка движется вперед
             return True
 
         # Проверка для королевских шашек
         if piece in ['W', 'B']:
             if abs(to_row - from_row) == 1 and abs(to_col - from_col) == 1:
-                return True
+                return True  # Движение короля на одну клетку
+            # Возможность захвата для королевских шашек в любом направлении
+            if abs(to_row - from_row) == 2 and abs(to_col - from_col) == 2:
+                middle_row = (from_row + to_row) // 2
+                middle_col = (from_col + to_col) // 2
+                middle_piece = self.board[middle_row][middle_col]
+                if middle_piece is not None and middle_piece.lower() != piece.lower():
+                    return True  # Королевская шашка может захватывать в любом направлении
 
         return False
 
