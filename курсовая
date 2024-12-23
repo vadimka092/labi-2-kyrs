@@ -1,30 +1,24 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 from PIL import Image, ImageTk
-import random
+
 
 # Класс игры в шашки
 class CheckersGame:
-    def __init__(self, root, mode, player_name):
+    def __init__(self, root, player_name):
         self.root = root
         self.root.title(f"Итальянские шашки - {player_name}")
-        self.mode = mode
-        self.player_name = player_name
         self.board = self.create_board()
         self.canvas = tk.Canvas(root, width=400, height=400)
         self.canvas.pack()
         self.selected_piece = None
-        self.turn = 'w'
+        self.turn = 'w'  # Начинают белые
         self.load_images()
         self.draw_board()
         self.draw_pieces()
         self.canvas.bind("<Button-1>", self.on_click)
-        self.bot_active = (self.mode != 'pvp')
-        if self.bot_active and self.turn == 'b':
-            self.bot_move()
 
     def load_images(self):
-        # Загрузка изображений шашек
         self.white_piece_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
         self.black_piece_img = ImageTk.PhotoImage(Image.open("black.png").resize((40, 40)))
         self.white_king_img = ImageTk.PhotoImage(Image.open("white.png").resize((40, 40)))
@@ -37,7 +31,6 @@ class CheckersGame:
         }
 
     def create_board(self):
-        # Создание начального состояния доски
         board = [[None for _ in range(8)] for _ in range(8)]
         for row in range(3):
             for col in range(8):
@@ -50,7 +43,6 @@ class CheckersGame:
         return board
 
     def draw_board(self):
-        # Отрисовка доски
         self.canvas.delete("all")
         for row in range(8):
             for col in range(8):
@@ -60,7 +52,6 @@ class CheckersGame:
                 )
 
     def draw_pieces(self):
-        # Отрисовка шашек
         for row in range(8):
             for col in range(8):
                 piece = self.board[row][col]
@@ -69,21 +60,25 @@ class CheckersGame:
                     self.canvas.create_image(x0, y0, anchor='nw', image=self.images[piece])
 
     def on_click(self, event):
-        # Обработка клика мыши
         col, row = event.x // 50, event.y // 50
         if self.selected_piece:
             self.move_piece(self.selected_piece, (row, col))
             self.selected_piece = None
         else:
-            self.selected_piece = (row, col)
+            if self.board[row][col] and self.board[row][col].lower() == self.turn:
+                self.selected_piece = (row, col)
 
     def move_piece(self, from_pos, to_pos):
-        # Перемещение шашки
         from_row, from_col = from_pos
         to_row, to_col = to_pos
         piece = self.board[from_row][from_col]
         if self.validate_move(piece, from_pos, to_pos):
-            self.board[to_row][to_col] = self.board[from_row][from_col]
+            # Если захват, удаляем шашку противника
+            if abs(to_row - from_row) == 2:
+                middle_row = (from_row + to_row) // 2
+                middle_col = (from_col + to_col) // 2
+                self.board[middle_row][middle_col] = None  # Удаление захваченной шашки
+            self.board[to_row][to_col] = piece
             self.board[from_row][from_col] = None
             self.draw_board()
             self.draw_pieces()
@@ -92,72 +87,50 @@ class CheckersGame:
                 return
             self.switch_turn()
 
+
     def validate_move(self, piece, from_pos, to_pos):
-        # Проверка корректности хода
         from_row, from_col = from_pos
         to_row, to_col = to_pos
+
         if self.board[to_row][to_col] is not None:
             return False
+
+    # Логика захвата
+        if abs(to_row - from_row) == 2 and abs(to_col - from_col) == 2:
+            middle_row = (from_row + to_row) // 2
+            middle_col = (from_col + to_col) // 2
+            middle_piece = self.board[middle_row][middle_col]
+            if middle_piece is not None and middle_piece.lower() != piece.lower():
+                return True
+
+    # Логика обычного движения (только вперед для обычных шашек)
         if piece == 'w' and to_row == from_row - 1 and abs(to_col - from_col) == 1:
             return True
         if piece == 'b' and to_row == from_row + 1 and abs(to_col - from_col) == 1:
             return True
+
+    # Проверка для королевских шашек
         if piece in ['W', 'B']:
-            if abs(to_row - from_row) == abs(to_col - from_col):
+            if abs(to_row - from_row) == 1 and abs(to_col - from_col) == 1:
                 return True
+            return False
+
         return False
 
+
     def check_promotion(self, row, col):
-        # Проверка на превращение в дамку
         piece = self.board[row][col]
         if piece == 'w' and row == 0:
             self.board[row][col] = 'W'
         if piece == 'b' and row == 7:
             self.board[row][col] = 'B'
 
+
     def switch_turn(self):
-        # Смена хода
         self.turn = 'b' if self.turn == 'w' else 'w'
-        if self.bot_active and self.turn == 'b':
-            self.bot_move()
 
-    def bot_move(self):
-        # Ход бота
-        if self.mode == 'легкий бот':
-            self.easy_bot_move()
-        elif self.mode == 'сложный бот':
-            self.hard_bot_move()
-
-    def easy_bot_move(self):
-        # Простая логика бота
-        possible_moves = self.get_all_possible_moves('b')
-        if possible_moves:
-            move = random.choice(possible_moves)
-            self.move_piece(move[0], move[1])
-
-    def hard_bot_move(self):
-        # Продвинутая логика бота
-        possible_moves = self.get_all_possible_moves('b')
-        if possible_moves:
-            move = random.choice(possible_moves)
-            self.move_piece(move[0], move[1])
-
-    def get_all_possible_moves(self, color):
-        # Получение всех возможных ходов
-        moves = []
-        for row in range(8):
-            for col in range(8):
-                if self.board[row][col] and self.board[row][col].lower() == color:
-                    for dr in [-1, 1]:
-                        for dc in [-1, 1]:
-                            new_row, new_col = row + dr, col + dc
-                            if 0 <= new_row < 8 and 0 <= new_col < 8:
-                                if self.validate_move(self.board[row][col], (row, col), (new_row, new_col)):
-                                    moves.append(((row, col), (new_row, new_col)))
-        return moves
 
     def check_game_over(self):
-        # Проверка завершения игры
         white_pieces = sum(row.count('w') + row.count('W') for row in self.board)
         black_pieces = sum(row.count('b') + row.count('B') for row in self.board)
         if white_pieces == 0:
@@ -174,28 +147,83 @@ class CheckersGame:
             return True
         return False
 
+
     def end_game(self, message):
-        # Завершение игры
-        messagebox.showinfo("Game Over", message)
+        messagebox.showinfo("Игра окончена", message)
         self.root.quit()
 
-# Функция запуска игры
-def start_game(mode):
-    player_name = simpledialog.askstring("Player Registration", "Enter your name:")
-    if player_name:
-        game_root = tk.Toplevel()
-        game = CheckersGame(game_root, mode, player_name)
-        game_root.mainloop()
+
+    def get_all_possible_moves(self, color):
+        moves = []
+        for row in range(8):
+            for col in range(8):
+                if self.board[row][col] and self.board[row][col].lower() == color:
+                    # Проверка обычного движения
+                    for dr in [1] if color == 'b' else [-1]:  # Только в направление игрока
+                        for dc in [-1, 1]:  # Левый и правый диагонали
+                            new_row, new_col = row + dr, col + dc
+                            if 0 <= new_row < 8 and 0 <= new_col < 8:
+                                if self.validate_move(self.board[row][col], (row, col), (new_row, new_col)):
+                                    moves.append(((row, col), (new_row, new_col)))
+
+                # Проверка захватов
+                    for dr in [1] if color == 'b' else [-1]:  # Опять только в направление игрока
+                        for dc in [-1, 1]:  # Левый и правый диагонали
+                            new_row, new_col = row + dr, col + dc
+                            new_row_jump = new_row + dr
+                            new_col_jump = new_col + dc
+                            if (0 <= new_row_jump < 8 and 0 <= new_col_jump < 8 and
+                                    self.validate_move(self.board[row][col], (row, col), (new_row_jump, new_col_jump))):
+                                middle_row = (row + new_row_jump) // 2
+                                middle_col = (col + new_col_jump) // 2
+                                if self.board[middle_row][middle_col] and self.board[middle_row][
+                                    middle_col].lower() != color:
+                                    moves.append(((row, col), (new_row_jump, new_col_jump)))
+        return moves
+
+
+def register_user():
+    username = simpledialog.askstring("Регистрация", "Введите логин:")
+    password = simpledialog.askstring("Регистрация", "Введите пароль:", show='')
+
+    if username and password:
+        with open("registered_users.txt", "a") as f:
+            f.write(f"{username}:{password}\n")
+        messagebox.showinfo("Регистрация", "Регистрация прошла успешно!")
+        launch_game(username)
+
+
+def login_user():
+    username = simpledialog.askstring("Вход", "Введите логин:")
+    password = simpledialog.askstring("Вход", "Введите пароль:", show='')
+
+    if username and password:
+        with open("registered_users.txt", "r") as f:
+            users = f.readlines()
+            for user in users:
+                saved_username, saved_password = user.strip().split(':')
+                if saved_username == username and saved_password == password:
+                    messagebox.showinfo("Вход", "Вход выполнен!")
+                    launch_game(username)
+                    return
+
+    messagebox.showerror("Ошибка", "Неправильный логин или пароль!")
+
+
+def launch_game(player_name):
+    game_root = tk.Toplevel()
+    game = CheckersGame(game_root, player_name)
+    game_root.mainloop()
+
 
 # Главное окно
 if __name__ == "__main__":
     root = tk.Tk()
-    root.title("Select Game Mode")
+    root.title("Регистрация игрока")
 
-    tk.Label(root, text="Select Game Mode:").pack()
+    tk.Label(root, text="Регистрация/Вход игрока").pack()
 
-    tk.Button(root, text="Легкий бот", command=lambda: start_game('easy_bot')).pack()
-    tk.Button(root, text="Сложный бот", command=lambda: start_game('hard_bot')).pack()
-    tk.Button(root, text="PvP", command=lambda: start_game('pvp')).pack()
+    tk.Button(root, text="Регистрация", command=register_user).pack()
+    tk.Button(root, text="Вход", command=login_user).pack()
 
     root.mainloop()
